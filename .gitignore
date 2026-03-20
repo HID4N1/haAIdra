@@ -1,0 +1,10 @@
+backend/venv/
+__pycache__/
+*.pyc
+*.pyo
+*.DS_Store
+# Ignore the .env file that contains sensitive information
+.env
+# Ignore the logs directory
+backend/staticfiles
+backend/mediafiles
