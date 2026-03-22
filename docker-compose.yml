@@ -1,0 +1,79 @@
+version: '3.9'
+
+services:
+
+  #DataBase
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  #Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  #Backend
+  django:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --reload
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  #Celery Worker
+  celery:
+    build:
+      context: ./ai_pipeline
+      dockerfile: Dockerfile
+    command: celery -A tasks.pipeline worker --loglevel=info --concurrency=2
+    volumes:
+      - ./ai_pipeline:/app
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  #Nginx
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./backend/staticfiles:/staticfiles
+    ports:
+      - "80:80"
+    depends_on:
+      - django
+
+volumes:
+  postgres_data:
