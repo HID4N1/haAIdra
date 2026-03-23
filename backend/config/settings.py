@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +22,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+(()$dimx^)dlih#qbu6+5i2x*wrh#2vu83mrorn^2(h*(y%-!'
+SECRET_KEY = config("SECRET_KEY")
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:5173,http://localhost:3000",
+    cast=Csv(),
+)
+CORS_ALLOW_CREDENTIALS = True
 
 
 # Application definition
@@ -41,6 +50,7 @@ INSTALLED_APPS = [
 #third party
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'drf_spectacular',
 #Local apps
@@ -129,8 +139,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'staticfiles/'
-MEDIA_URL = 'mediafiles/'
+STATIC_URL  = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL   = "/media/"
+MEDIA_ROOT  = BASE_DIR / "mediafiles"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -146,14 +159,50 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
 }
 
 #JWT config
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
+}
+
+#REDIS config for Celery
+REDIS_URL               = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_BROKER_URL       = REDIS_URL
+CELERY_RESULT_BACKEND   = REDIS_URL
+CELERY_ACCEPT_CONTENT   = ["json"]
+CELERY_TASK_SERIALIZER  = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE         = "UTC"
+
+
+#AWS config
+AWS_ACCESS_KEY_ID        = config("AWS_ACCESS_KEY_ID",       default="")
+AWS_SECRET_ACCESS_KEY    = config("AWS_SECRET_ACCESS_KEY",   default="")
+AWS_STORAGE_BUCKET_NAME  = config("AWS_STORAGE_BUCKET_NAME", default="callsight-audio")
+AWS_S3_REGION_NAME       = config("AWS_S3_REGION_NAME",      default="eu-west-1")
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_PRESIGNED_URL_EXPIRY = 3600
+
+
+#API documentation
+SPECTACULAR_SETTINGS = {
+    "TITLE": "CallSight AI API",
+    "DESCRIPTION": "AI-powered call quality analysis platform",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
