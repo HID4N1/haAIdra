@@ -1,0 +1,33 @@
+# Core
+celery==5.3.6
+redis==5.0.3
+psycopg2-binary==2.9.9
+boto3==1.34.69
+python-dotenv==1.0.1
+requests==2.31.0
+
+# Audio processing
+ffmpeg-python==0.2.0
+
+# ASR
+faster-whisper==1.0.1
+
+# Speaker diarization (requires HF_TOKEN)
+pyannote.audio==3.1.1
+
+# Sentiment + Topic classification
+transformers==4.38.2
+torch==2.7.1
+sentencepiece==0.2.0
+
+# VAD (optional)
+webrtcvad==2.0.10
+
+# NER masking (optional)
+spacy==3.7.4
+
+# Audio manipulation
+pydub==0.25.1
+
+
+
