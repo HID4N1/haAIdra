@@ -9,6 +9,7 @@ boto3>=1.34
 django-storages>=1.13
 #Async
 Redis>=4.5
+celery>=5.3
 #Filtering and utilities
 django-filter>=23.0
 django-decouple>=2.0
