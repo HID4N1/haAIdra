@@ -8,6 +8,7 @@ import { AppShell } from './components/layout/AppShell';
 // Auth Pages
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
+import LandingPage from './pages/public/LandingPage';
 
 // Dashboard
 import { DashboardPage } from './pages/dashboard/DashboardPage';
@@ -39,17 +40,18 @@ function App() {
         <Router>
           <Routes>
             {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 
             {/* Protected Routes */}
-            <Route path="/" element={
+            <Route path="/app" element={
               <ProtectedRoute>
                 <AppShell />
               </ProtectedRoute>
             }>
-              {/* Redirect root to dashboard */}
-              <Route index element={<Navigate to="/dashboard" replace />} />
+              {/* Redirect /app to /app/dashboard */}
+              <Route index element={<Navigate to="/app/dashboard" replace />} />
               
               {/* Dashboard */}
               <Route path="dashboard" element={<DashboardPage />} />
@@ -94,7 +96,7 @@ function App() {
             </Route>
 
             {/* Catch all */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
           </Routes>
         </Router>
       </ToastProvider>
