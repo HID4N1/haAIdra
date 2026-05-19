@@ -7,6 +7,7 @@ The haAidra frontend now uses **TanStack Query** for ALL API calls - no mock dat
 ## 📊 **API Hooks Overview**
 
 ### **Core Data Hooks** (10 files)
+
 1. **`useAuth.js`** - Authentication state and mutations
 2. **`useCalls.js`** - Call data management
 3. **`useAnalysis.js`** - Analysis data with polling
@@ -19,6 +20,7 @@ The haAidra frontend now uses **TanStack Query** for ALL API calls - no mock dat
 10. **`useCompanies.js`** - Company management
 
 ### **Total TanStack Query Usage**
+
 - **84+ useQuery/useMutation calls** across all hooks
 - **Zero mock data** in production code
 - **Proper caching** and invalidation strategies

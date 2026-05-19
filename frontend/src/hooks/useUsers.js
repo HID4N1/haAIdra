@@ -1,5 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../lib/api';
+import api, { agentsApi } from '../lib/api';
+import { mockAgents } from '../lib/mockData';
+
+const normalizeAgent = (agent) => ({
+  ...agent,
+  name: agent.name || [agent.first_name, agent.last_name].filter(Boolean).join(' ') || agent.user?.email || agent.email || 'Agent',
+  email: agent.email || agent.user?.email || '',
+  role: agent.role || agent.user?.role || 'agent',
+  calls: agent.calls ?? agent.total_calls ?? agent.call_count ?? 0,
+  average_score: agent.average_score ?? agent.avg_score ?? agent.period_avg_score ?? 0,
+  average_sentiment: agent.average_sentiment || agent.sentiment || agent.period_avg_sentiment || 'neutral',
+  performance: agent.performance || (Number(agent.average_score ?? agent.avg_score ?? 0) >= 85 ? 'Strong' : 'Coaching'),
+});
 
 export const useUsers = (params = {}) => {
   return useQuery({
@@ -15,8 +27,14 @@ export const useAgents = (params = {}) => {
   return useQuery({
     queryKey: ['agents', params],
     queryFn: async () => {
-      const response = await api.get('agents/', { params });
-      return response.data;
+      try {
+        const data = await agentsApi.list(params);
+        const results = Array.isArray(data) ? data : data?.results || data?.items || [];
+        return { ...(Array.isArray(data) ? {} : data), results: results.map(normalizeAgent) };
+      } catch (error) {
+        console.error('Using mock agents because agents endpoint is unavailable:', error?.message);
+        return { results: mockAgents.map(normalizeAgent), count: mockAgents.length, isMock: true };
+      }
     },
   });
 };

@@ -95,6 +95,9 @@ def trigger_analysis(self, call_id: str):
         _mark_failed(call_id, "No audio file found")
         return
 
+    if os.environ.get("MOCK_AI_PIPELINE", "false").lower() == "true":
+        return _run_mock_pipeline(call, started_at)
+
     # ── Helper functions ──────────────────────────────────────────────────────
 
     def update_step(step: str):
@@ -115,6 +118,7 @@ def trigger_analysis(self, call_id: str):
             call_id=call_id,
             status="done",
             finished_at=finished_at,
+            error_message="",
         )
         update_call_status(call_id, "analyzed")
 
@@ -183,19 +187,23 @@ def trigger_analysis(self, call_id: str):
             "Pipeline failed at step for call %s: %s",
             call_id, exc, exc_info=True
         )
-        _mark_failed(call_id, str(exc))
-
-        # Retry if under max retries
-        try:
-            raise self.retry(exc=exc)
-        except self.MaxRetriesExceededError:
-            logger.error(
-                "Max retries exceeded for call %s — giving up", call_id
+        next_retry = self.request.retries + 1
+        if next_retry <= self.max_retries:
+            update_pipeline_job(
+                call_id=call_id,
+                status="running",
+                error_message=f"Retrying after error: {str(exc)[:450]}",
+                retry_count=next_retry,
             )
-            return {"call_id": call_id, "status": "failed", "error": str(exc)}
+            update_call_status(call_id, "processing")
+            raise self.retry(exc=exc)
+
+        logger.error("Max retries exceeded for call %s — giving up", call_id)
+        _mark_failed(call_id, str(exc), retry_count=next_retry)
+        return {"call_id": call_id, "status": "failed", "error": str(exc)}
 
 
-def _mark_failed(call_id: str, error_message: str):
+def _mark_failed(call_id: str, error_message: str, retry_count=None):
     """Marks both the pipeline_job and call as failed."""
     from utils.db import update_pipeline_job, update_call_status
     try:
@@ -204,7 +212,143 @@ def _mark_failed(call_id: str, error_message: str):
             status="failed",
             error_message=error_message[:500],  # Truncate long errors
             finished_at=datetime.now(timezone.utc),
+            retry_count=retry_count,
         )
         update_call_status(call_id, "failed")
     except Exception as e:
         logger.error("Failed to mark call as failed: %s", e)
+
+
+def _run_mock_pipeline(call: dict, started_at: datetime):
+    """Fast deterministic demo pipeline used for academic/local demos."""
+    from utils.db import (
+        save_transcript, save_sentiment, save_topics, save_score, save_summary,
+        update_pipeline_job, update_call_status, update_call_duration,
+        update_agent_stats,
+    )
+
+    call_id = call["id"]
+
+    def update_step(step: str):
+        update_pipeline_job(
+            call_id=call_id,
+            status="running",
+            current_step=step,
+            error_message="",
+            started_at=started_at,
+        )
+        update_call_status(call_id, "processing")
+        logger.info("Mock step: %s", step)
+
+    segments = [
+        {
+            "start": 0,
+            "end": 7,
+            "speaker": "SPEAKER_00",
+            "text": "Thank you for calling haAIdra support. This call may be recorded for quality assurance.",
+        },
+        {
+            "start": 8,
+            "end": 22,
+            "speaker": "SPEAKER_01",
+            "text": "I was charged twice this month and I need help understanding what happened.",
+        },
+        {
+            "start": 23,
+            "end": 48,
+            "speaker": "SPEAKER_00",
+            "text": "I understand how frustrating that is. I will verify the account and review the latest invoice with you.",
+        },
+        {
+            "start": 49,
+            "end": 76,
+            "speaker": "SPEAKER_00",
+            "text": "I found the duplicate charge, submitted a refund request, and added a note to prevent another duplicate billing attempt.",
+        },
+        {
+            "start": 77,
+            "end": 95,
+            "speaker": "SPEAKER_01",
+            "text": "That resolves it. Please send me the confirmation by email.",
+        },
+        {
+            "start": 96,
+            "end": 118,
+            "speaker": "SPEAKER_00",
+            "text": "The confirmation is on its way. Is there anything else I can help you with today?",
+        },
+    ]
+    duration = 118
+
+    update_step("transcription")
+    save_transcript(call_id, call.get("language") or "en", 0.03, duration, segments)
+    update_call_duration(call_id, duration)
+
+    update_step("sentiment")
+    save_sentiment(
+        call_id,
+        "positive",
+        0.86,
+        [
+            {"start": item["start"], "end": item["end"], "label": "positive", "score": 0.82}
+            for item in segments
+        ],
+    )
+
+    update_step("topics")
+    topics = [
+        {"label": "Billing", "score": 0.94},
+        {"label": "Refund", "score": 0.89},
+        {"label": "Retention", "score": 0.72},
+    ]
+    save_topics(call_id, topics)
+
+    update_step("scoring")
+    save_score(
+        call_id=call_id,
+        config_id=None,
+        accueil=18,
+        accueil_max=20,
+        empathie=17,
+        empathie_max=20,
+        resolution=19,
+        resolution_max=20,
+        langage=14,
+        langage_max=15,
+        conformite=14,
+        conformite_max=15,
+        cloture=9,
+        cloture_max=10,
+        total=91,
+        ai_total=91,
+    )
+
+    update_step("summary")
+    save_summary(
+        call_id,
+        motif="Customer reported a duplicate monthly billing charge.",
+        actions="Agent verified the account, identified the duplicate charge, submitted a refund request, and sent confirmation.",
+        outcome="Issue resolved. Customer accepted the refund timeline and remained satisfied.",
+        recommendations="Maintain the strong empathy opening. Add one proactive explanation while checking account history.",
+    )
+
+    finished_at = datetime.now(timezone.utc)
+    update_pipeline_job(
+        call_id=call_id,
+        status="done",
+        finished_at=finished_at,
+        error_message="",
+    )
+    update_call_status(call_id, "analyzed")
+    if call.get("agent_id"):
+        update_agent_stats(call["agent_id"])
+
+    return {
+        "call_id": call_id,
+        "status": "done",
+        "mock": True,
+        "transcript": len(segments),
+        "sentiment": "positive",
+        "topics": len(topics),
+        "score": 91,
+    }

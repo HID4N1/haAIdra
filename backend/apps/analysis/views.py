@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from core.mixins import TenantScopedMixin
 from apps.users.permissions import IsManager, IsQASupervisor, IsAgent
 from apps.calls.models import Call, PipelineJob
+from apps.calls.serializers import pipeline_display, pipeline_progress
 from .models import Transcript, Sentiment, Topic, Score, Summary, QAReview
 from .serializers import (
     AnalysisSerializer, QAReviewSerializer, QAReviewUpdateSerializer,
@@ -37,20 +38,19 @@ class AnalysisView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Still processing — return pipeline status for polling
-        if call.status != Call.Status.ANALYZED:
-            try:
-                job = call.pipeline_job
-                return Response({
-                    "status":       call.status,
-                    "current_step": job.current_step,
-                    "error":        job.error_message or None,
-                })
-            except PipelineJob.DoesNotExist:
-                return Response({"status": call.status})
+        job = getattr(call, "pipeline_job", None)
 
         # Build full analysis payload
         data = {
+            "call_id":     str(call.id),
+            "status":      call.status,
+            "job_status":  getattr(job, "status", None),
+            "current_step": getattr(job, "current_step", None),
+            "progress":    pipeline_progress(job),
+            "display_status": pipeline_display(job, call.status),
+            "retry_count": getattr(job, "retry_count", 0),
+            "error":       getattr(job, "error_message", "") or None,
+            "updated_at":   call.updated_at,
             "transcript": getattr(call, "transcript", None),
             "sentiment":  getattr(call, "sentiment",  None),
             "topic":      getattr(call, "topic",      None),
@@ -78,7 +78,10 @@ class TriggerAnalysisView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if call.status == Call.Status.PROCESSING:
+        job = getattr(call, "pipeline_job", None)
+        if call.status == Call.Status.PROCESSING or (
+            job and job.status in (PipelineJob.Status.QUEUED, PipelineJob.Status.RUNNING)
+        ):
             return Response(
                 {"detail": "Analysis already in progress."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -97,7 +100,10 @@ class TriggerAnalysisView(APIView):
             job.retry_count   = 0
             job.started_at    = None
             job.finished_at   = None
-            job.save()
+            job.save(update_fields=[
+                "status", "current_step", "error_message", "retry_count",
+                "started_at", "finished_at", "updated_at",
+            ])
         except PipelineJob.DoesNotExist:
             job = PipelineJob.objects.create(call=call)
 
@@ -135,8 +141,11 @@ class QAReviewViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         qs     = super().get_queryset()
         status = self.request.query_params.get("status")
+        call_id = self.request.query_params.get("call")
         if status:
             qs = qs.filter(status=status)
+        if call_id:
+            qs = qs.filter(call_id=call_id)
         return qs.order_by("-created_at")
 
     def perform_update(self, serializer):

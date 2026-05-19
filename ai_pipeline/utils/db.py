@@ -62,6 +62,7 @@ def update_pipeline_job(
     error_message: Optional[str] = None,
     started_at: Optional[datetime] = None,
     finished_at: Optional[datetime] = None,
+    retry_count: Optional[int] = None,
 ):
     """
     Updates the pipeline_job record for a call.
@@ -88,6 +89,7 @@ def update_pipeline_job(
                     error_message = COALESCE(%s, error_message),
                     started_at    = COALESCE(started_at, %s),
                     finished_at   = COALESCE(%s, finished_at),
+                    retry_count   = COALESCE(%s, retry_count),
                     updated_at    = %s
                 WHERE call_id = %s
             """, (
@@ -96,6 +98,7 @@ def update_pipeline_job(
                 error_message,
                 started_at or _now(),
                 finished_at,
+                retry_count,
                 _now(),
                 call_id,
             ))
@@ -130,6 +133,26 @@ def update_call_status(call_id: str, status: str):
     except Exception as e:
         conn.rollback()
         logger.error("Failed to update call status for %s: %s", call_id, e)
+        raise
+    finally:
+        conn.close()
+
+
+def update_call_duration(call_id: str, duration: float):
+    """Stores transcript/audio duration on the call for dashboard tables."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE call
+                SET duration = %s, updated_at = %s
+                WHERE id = %s
+            """, (int(round(duration or 0)), _now(), call_id))
+            conn.commit()
+            logger.debug("call duration updated: %s -> %.1fs", call_id, duration or 0)
+    except Exception as e:
+        conn.rollback()
+        logger.error("Failed to update call duration for %s: %s", call_id, e)
         raise
     finally:
         conn.close()

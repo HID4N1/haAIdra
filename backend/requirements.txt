@@ -12,6 +12,7 @@ Redis>=4.5
 celery>=5.3
 #Filtering and utilities
 django-filter>=23.0
+django-cors-headers>=4.3
 django-decouple>=2.0
 #APIDocumentation
 drf-spectacular>=0.27

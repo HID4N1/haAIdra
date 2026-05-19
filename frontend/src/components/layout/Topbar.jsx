@@ -1,39 +1,35 @@
 import React from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { formatDate } from '../../lib/utils';
 
 export const Topbar = () => {
   const { user, logout } = useAuth();
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Welcome back, {user?.first_name || user?.email}
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div className="px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-slate-500">Welcome back</p>
+            <h1 className="text-lg font-semibold text-slate-950">
+              {user?.first_name || user?.email || 'haAIdra user'}
             </h1>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">
+          <div className="flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-medium text-slate-900">
                 {user?.first_name} {user?.last_name}
               </p>
-              <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+              <p className="text-xs capitalize text-slate-500">{user?.role}</p>
             </div>
             
-            <div className="relative">
-              <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">
-                  {(user?.first_name?.[0] || user?.email?.[0] || 'U').toUpperCase()}
-                </span>
-              </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+              {(user?.first_name?.[0] || user?.email?.[0] || 'U').toUpperCase()}
             </div>
             
             <button
               onClick={logout}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
               title="Logout"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

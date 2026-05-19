@@ -4,32 +4,16 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from './components/ui/Toast';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
-
-// Auth Pages
+import { LandingPage } from './pages/public/LandingPage';
 import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
-
-// Dashboard
 import { DashboardPage } from './pages/dashboard/DashboardPage';
-
-// Calls
 import { CallsPage } from './pages/calls/CallsPage';
 import { CallDetailPage } from './pages/calls/CallDetailPage';
-
-// Reports
-import { ReportsPage } from './pages/reports/ReportsPage';
-
-// Users
-import { UsersPage } from './pages/users/UsersPage';
 import { AgentsPage } from './pages/users/AgentsPage';
-
-// Reviews
-import { QAReviewsPage } from './pages/reviews/QAReviewsPage';
-
-// Settings
-import { ScoringConfigPage } from './pages/settings/ScoringConfigPage';
-
-// Query Client
+import { AnalyticsPage } from './pages/analytics/AnalyticsPage';
+import { ReportsPage } from './pages/reports/ReportsPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import queryClient from './lib/queryClient';
 
 function App() {
@@ -38,63 +22,25 @@ function App() {
       <ToastProvider>
         <Router>
           <Routes>
-            {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-
-            {/* Protected Routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <AppShell />
-              </ProtectedRoute>
-            }>
-              {/* Redirect root to dashboard */}
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              
-              {/* Dashboard */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppShell />
+                </ProtectedRoute>
+              }
+            >
               <Route path="dashboard" element={<DashboardPage />} />
-
-              {/* Calls */}
               <Route path="calls" element={<CallsPage />} />
               <Route path="calls/:id" element={<CallDetailPage />} />
-
-              {/* Reports */}
-              <Route path="reports" element={
-                <ProtectedRoute requiredRole="manager">
-                  <ReportsPage />
-                </ProtectedRoute>
-              } />
-
-              {/* Users */}
-              <Route path="users" element={
-                <ProtectedRoute requiredRole="admin">
-                  <UsersPage />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="agents" element={
-                <ProtectedRoute requiredRole="manager">
-                  <AgentsPage />
-                </ProtectedRoute>
-              } />
-
-              {/* Reviews */}
-              <Route path="reviews" element={
-                <ProtectedRoute requiredRole="qa_supervisor">
-                  <QAReviewsPage />
-                </ProtectedRoute>
-              } />
-
-              {/* Settings */}
-              <Route path="settings/scoring" element={
-                <ProtectedRoute requiredRole="admin">
-                  <ScoringConfigPage />
-                </ProtectedRoute>
-              } />
+              <Route path="agents" element={<ProtectedRoute requiredRole="manager"><AgentsPage /></ProtectedRoute>} />
+              <Route path="analytics" element={<ProtectedRoute requiredRole="manager"><AnalyticsPage /></ProtectedRoute>} />
+              <Route path="reports" element={<ProtectedRoute requiredRole="manager"><ReportsPage /></ProtectedRoute>} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
-
-            {/* Catch all */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
       </ToastProvider>

@@ -11,6 +11,7 @@ from .models import Call, AudioFile, PipelineJob
 from .serializers import (
     CallSerializer, CallListSerializer,
     CallUploadSerializer, CallUpdateSerializer,
+    PipelineJobSerializer, pipeline_display, pipeline_progress,
 )
 from .filters import CallFilter
 from .storage import s3_storage
@@ -29,7 +30,8 @@ class CallViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """
     queryset = Call.objects.select_related(
                            "agent", "company", "uploaded_by",
-                           "audio_file", "pipeline_job"
+                           "audio_file", "pipeline_job",
+                           "sentiment", "score", "topic"
                        ).all()
     filterset_class  = CallFilter
     search_fields    = ["client_phone", "agent__user__email", "tags"]
@@ -52,7 +54,7 @@ class CallViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         return CallSerializer
 
     def create(self, request, *args, **kwargs):
-        serializer = CallUploadSerializer(data=request.data)
+        serializer = CallUploadSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         audio      = serializer.validated_data["audio"]
@@ -108,6 +110,12 @@ class CallViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             job.save(update_fields=["status", "updated_at"])
         except Exception as e:
             logger.error("Failed to trigger analysis for call %s: %s", call.id, e)
+            job.status = PipelineJob.Status.FAILED
+            job.error_message = "Analysis could not be queued. Please retry."
+            job.finished_at = timezone.now()
+            job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+            call.status = Call.Status.FAILED
+            call.save(update_fields=["status", "updated_at"])
 
         return Response(
             CallSerializer(call).data,
@@ -128,8 +136,16 @@ class CallViewSet(TenantScopedMixin, viewsets.ModelViewSet):
                 {"detail": "No pipeline job found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        from .serializers import PipelineJobSerializer
-        return Response(PipelineJobSerializer(job).data)
+        data = PipelineJobSerializer(job).data
+        data.update({
+            "call_id": str(call.id),
+            "call_status": call.status,
+            "progress": pipeline_progress(job),
+            "display_status": pipeline_display(job, call.status),
+            "is_terminal": call.status in (Call.Status.ANALYZED, Call.Status.FAILED)
+            or job.status in (PipelineJob.Status.DONE, PipelineJob.Status.FAILED),
+        })
+        return Response(data)
 
     @action(detail=True, methods=["post"], url_path="flag",
             permission_classes=[IsQASupervisor])

@@ -31,7 +31,7 @@ import os
 from typing import Dict, List, Optional, Tuple
 from utils.s3    import get_audio_file, delete_tempfile
 from utils.audio import normalize_audio, apply_vad, get_audio_metadata, cleanup_temp_files
-from utils.db    import save_transcript, update_pipeline_job, update_call_status
+from utils.db    import save_transcript, update_call_duration
 from models.loaders   import get_whisper_model, get_diarization_model
 from models.pii_masker import mask_segments
 
@@ -131,6 +131,7 @@ def run_transcription(call: Dict) -> Dict:
             duration=transcript_data["duration"],
             segments=transcript_data["segments"],
         )
+        update_call_duration(call_id, transcript_data["duration"])
 
         logger.info(
             "Transcription complete: call=%s, %d segments, duration=%.1fs",

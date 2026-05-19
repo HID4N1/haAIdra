@@ -5,7 +5,7 @@ export const useReviews = (params = {}) => {
   return useQuery({
     queryKey: ['reviews', params],
     queryFn: async () => {
-      const response = await api.get('qa-reviews/', { params });
+      const response = await api.get('reviews/', { params });
       return response.data;
     },
   });
@@ -15,7 +15,7 @@ export const useReview = (reviewId) => {
   return useQuery({
     queryKey: ['review', reviewId],
     queryFn: async () => {
-      const response = await api.get(`qa-reviews/${reviewId}/`);
+      const response = await api.get(`reviews/${reviewId}/`);
       return response.data;
     },
     enabled: !!reviewId,
@@ -27,7 +27,7 @@ export const useCreateReview = () => {
 
   return useMutation({
     mutationFn: async (reviewData) => {
-      const response = await api.post('qa-reviews/', reviewData);
+      const response = await api.post('reviews/', reviewData);
       return response.data;
     },
     onSuccess: () => {
@@ -41,7 +41,7 @@ export const usePatchReview = (reviewId) => {
 
   return useMutation({
     mutationFn: async (data) => {
-      const response = await api.patch(`qa-reviews/${reviewId}/`, data);
+      const response = await api.patch(`reviews/${reviewId}/`, data);
       return response.data;
     },
     onSuccess: () => {
@@ -56,7 +56,7 @@ export const useApproveReview = () => {
 
   return useMutation({
     mutationFn: async ({ reviewId, comment }) => {
-      const response = await api.post(`qa-reviews/${reviewId}/approve/`, { comment });
+      const response = await api.patch(`reviews/${reviewId}/`, { status: 'approved', comment });
       return response.data;
     },
     onSuccess: (_, { reviewId }) => {
@@ -71,7 +71,7 @@ export const useRejectReview = () => {
 
   return useMutation({
     mutationFn: async ({ reviewId, reason, comment }) => {
-      const response = await api.post(`qa-reviews/${reviewId}/reject/`, { reason, comment });
+      const response = await api.patch(`reviews/${reviewId}/`, { status: 'rejected', override_reason: reason, comment });
       return response.data;
     },
     onSuccess: (_, { reviewId }) => {
@@ -85,7 +85,7 @@ export const useCallReviews = (callId) => {
   return useQuery({
     queryKey: ['call-reviews', callId],
     queryFn: async () => {
-      const response = await api.get(`calls/${callId}/reviews/`);
+      const response = await api.get('reviews/', { params: { call: callId } });
       return response.data;
     },
     enabled: !!callId,

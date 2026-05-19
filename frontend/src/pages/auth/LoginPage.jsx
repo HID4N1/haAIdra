@@ -1,172 +1,161 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useAuth } from '../../hooks/useAuth';
+import { useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Input } from '../../components/ui/FormControls';
+import { useAuth } from '../../hooks/useAuth';
+import loginHero from '../../assets/login-hero.jpg';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, isLoggingIn, loginError } = useAuth();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const { login, isLoggingIn, isAuthenticated } = useAuth();
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
 
-  const handleChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const result = await login(formData.email, formData.password);
-      if (result.success) {
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      // Error is handled by the useAuth hook
-    }
+  const submit = async (event) => {
+    event.preventDefault();
+    setError('');
+    const result = await login(form.email, form.password);
+    if (result.success) navigate('/dashboard', { replace: true });
+    else setError(result.error || 'Unable to sign in. Check your credentials and try again.');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
-        >
-          <div className="mx-auto w-16 h-16 bg-primary-500 rounded-lg flex items-center justify-center mb-6">
-            <span className="text-white font-bold text-2xl">hA</span>
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900">Sign in to haAidra</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            AI-powered call center quality assurance
-          </p>
-        </motion.div>
-      </div>
+    <div className="min-h-screen bg-slate-100 text-slate-950">
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+        <main className="flex items-center justify-center px-4 py-10 sm:px-6 lg:px-12">
+          <div className="w-full max-w-[440px]">
+            <Link to="/" className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-950 text-sm font-bold text-cyan-300 shadow-lg shadow-slate-300/60">
+                hA
+              </div>
+              <div>
+                <div className="text-lg font-semibold">haAIdra</div>
+                <div className="text-xs text-slate-500">AI Call Intelligence for Call Centers</div>
+              </div>
+            </Link>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Sign in</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-6" onSubmit={handleSubmit}>
-                {loginError && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-danger-50 border border-danger-200 rounded-md p-3"
-                  >
-                    <p className="text-sm text-danger-800">{loginError}</p>
-                  </motion.div>
+            <Link
+              to="/"
+              className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-950"
+            >
+              <span aria-hidden="true">←</span>
+              Back to home
+            </Link>
+
+            <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/80 sm:p-8">
+              <div>
+                <p className="text-sm font-semibold text-cyan-700">Workspace access</p>
+                <h2 className="mt-2 text-3xl font-bold text-slate-950">Sign in to haAIdra</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  Continue to your quality, analytics, and coaching dashboard.
+                </p>
+              </div>
+
+              <form className="mt-7 space-y-5" onSubmit={submit}>
+                {error && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {error}
+                  </div>
                 )}
 
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email address
+                <Input
+                  label="Email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={form.email}
+                  onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                  placeholder="you@company.com"
+                />
+
+                <Input
+                  label="Password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={form.password}
+                  onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                  placeholder="Enter your password"
+                />
+
+                <div className="flex items-center justify-between text-sm">
+                  <label className="flex items-center gap-2 text-slate-600">
+                    <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" />
+                    Remember me
                   </label>
-                  <div className="mt-1">
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="Enter your email"
-                    />
-                  </div>
+                  <button type="button" className="font-medium text-cyan-700 hover:text-cyan-900">
+                    Forgot password?
+                  </button>
                 </div>
 
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Password
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="password"
-                      name="password"
-                      type="password"
-                      autoComplete="current-password"
-                      required
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="Enter your password"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <input
-                      id="remember-me"
-                      name="remember-me"
-                      type="checkbox"
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                      Remember me
-                    </label>
-                  </div>
-
-                  <div className="text-sm">
-                    <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                      Forgot your password?
-                    </a>
-                  </div>
-                </div>
-
-                <div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    loading={isLoggingIn}
-                    disabled={!formData.email || !formData.password}
-                  >
-                    {isLoggingIn ? 'Signing in...' : 'Sign in'}
-                  </Button>
-                </div>
+                <Button type="submit" className="h-11 w-full" loading={isLoggingIn}>
+                  {isLoggingIn ? 'Signing in...' : 'Continue'}
+                </Button>
               </form>
 
-              <div className="mt-6">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">New to haAidra?</span>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <Link
-                    to="/register"
-                    className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                  >
-                    Create an account
-                  </Link>
+              <div className="mt-7 border-t border-slate-200 pt-5">
+                <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
+                  <TrustItem label="Encrypted access" />
+                  <TrustItem label="Role-aware views" />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+
+            <p className="mt-6 text-center text-xs text-slate-500">
+              Protected dashboard access for managers, QA supervisors, and agents.
+            </p>
+          </div>
+        </main>
+
+        <section className="relative hidden min-h-screen overflow-hidden bg-slate-950 p-4 lg:block">
+          <div className="relative h-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
+            <img
+              src={loginHero}
+              alt="haAIdra call intelligence dashboard"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/20 to-slate-950/80" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/10 via-transparent to-slate-950/30" />
+
+            <div className="relative flex h-full flex-col justify-between p-10 text-white xl:p-12">
+              <div className="inline-flex w-fit rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-medium text-cyan-100 backdrop-blur">
+                Secure AI workspace for call-center teams
+              </div>
+
+              <div className="max-w-xl">
+                <h1 className="text-4xl font-bold leading-tight xl:text-5xl">
+                  Quality intelligence for every customer conversation.
+                </h1>
+                <p className="mt-5 max-w-lg text-base leading-7 text-slate-200 xl:text-lg xl:leading-8">
+                  Access transcripts, AI scoring, sentiment insights, coaching notes, and performance dashboards from one focused operating system.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <Metric value="100%" label="review coverage" />
+                <Metric value="RBAC" label="role-based access" />
+                <Metric value="AI QA" label="scoring workflow" />
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
 };
+
+const Metric = ({ value, label }) => (
+  <div className="rounded-lg border border-white/10 bg-slate-950/35 p-4 backdrop-blur-md">
+    <div className="text-xl font-bold text-cyan-300">{value}</div>
+    <div className="mt-1 text-xs leading-5 text-slate-300">{label}</div>
+  </div>
+);
+
+const TrustItem = ({ label }) => (
+  <div className="flex items-center gap-2">
+    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+    <span>{label}</span>
+  </div>
+);

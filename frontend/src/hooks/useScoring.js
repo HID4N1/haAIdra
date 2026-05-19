@@ -31,7 +31,15 @@ export const useResetScoring = (companyId) => {
 
   return useMutation({
     mutationFn: async () => {
-      const response = await api.post(`companies/${companyId}/scoring/reset/`);
+      const response = await api.put(`companies/${companyId}/scoring/`, {
+        accueil_weight: '0.20',
+        empathie_weight: '0.20',
+        resolution_weight: '0.25',
+        langage_weight: '0.15',
+        conformite_weight: '0.10',
+        cloture_weight: '0.10',
+        is_active: true,
+      });
       return response.data;
     },
     onSuccess: () => {

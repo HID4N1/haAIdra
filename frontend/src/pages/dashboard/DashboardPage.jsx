@@ -1,159 +1,201 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { KPICard } from '../../components/dashboard/KPICard';
-import { VolumeChart } from '../../components/dashboard/VolumeChart';
-import { SentimentBreakdown } from '../../components/dashboard/SentimentBreakdown';
-import { ScoreTrend } from '../../components/dashboard/ScoreTrend';
-import { LeaderboardTable } from '../../components/dashboard/LeaderboardTable';
-import { useKPI, useCallsVolume, useSentimentBreakdown, useScoreTrend, useLeaderboard } from '../../hooks/useDashboard';
-import { PageSpinner } from '../../components/ui/Spinner';
+import { Link } from 'react-router-dom';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { ChartCard } from '../../components/ui/ChartCard';
+import { StatCard } from '../../components/ui/StatCard';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { StatusBadge, SentimentBadge } from '../../components/ui/StatusBadge';
+import { useKPI, useCallsVolume, useSentimentBreakdown, useScoreTrend, useLeaderboard, useTopics } from '../../hooks/useDashboard';
+import { useCalls } from '../../hooks/useCalls';
+import { formatDate } from '../../lib/utils';
 
-// Icons
-const PhoneIcon = () => (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-  </svg>
-);
-
-const CheckCircleIcon = () => (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const FlagIcon = () => (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-  </svg>
-);
-
-const ChartBarIcon = () => (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-  </svg>
-);
-
-const TrophyIcon = () => (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-  </svg>
-);
+const sentimentColors = ['#10b981', '#f59e0b', '#ef4444'];
 
 export const DashboardPage = () => {
-  const [days, setDays] = useState(30);
-  const [volumePeriod, setVolumePeriod] = useState('daily');
+  const { data: kpi } = useKPI(30);
+  const { data: volume = [] } = useCallsVolume(30, 'daily');
+  const { data: scores = [] } = useScoreTrend(30);
+  const { data: sentiment } = useSentimentBreakdown(30);
+  const { data: agents = [] } = useLeaderboard(5);
+  const { data: topics = [] } = useTopics(30, 8);
+  const { data: calls } = useCalls({ page_size: 5 });
 
-  const { data: kpi, isLoading: kpiLoading } = useKPI(days);
-  const { data: volumeData, isLoading: volumeLoading } = useCallsVolume(days, volumePeriod);
-  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentBreakdown(days);
-  const { data: scoreTrendData, isLoading: scoreTrendLoading } = useScoreTrend(days);
-  const { data: leaderboardData, isLoading: leaderboardLoading } = useLeaderboard();
-
-  const isLoading = kpiLoading || volumeLoading || sentimentLoading || scoreTrendLoading || leaderboardLoading;
-
-  if (isLoading) {
-    return <PageSpinner />;
-  }
+  const sentimentData = sentiment?.sentiment_distribution
+    ? Object.entries(sentiment.sentiment_distribution).map(([name, value]) => ({ name, value }))
+    : [];
+  const recentCalls = calls?.results || [];
+  const weakAgents = [...agents].sort((a, b) => (a.avg_score || 0) - (b.avg_score || 0)).slice(0, 3);
+  const dominantSentiment = sentimentData.length
+    ? sentimentData.reduce((best, item) => (item.value > best.value ? item : best), sentimentData[0]).name
+    : 'neutral';
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500">Overview of call center performance</p>
+          <h1 className="text-2xl font-bold text-slate-950">Dashboard</h1>
+          <p className="mt-1 text-slate-500">Live quality, sentiment, and coaching signals across the call center.</p>
         </div>
-        
-        <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium text-gray-700">Period:</label>
-          <select
-            value={days}
-            onChange={(e) => setDays(Number(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value={7}>Last 7 days</option>
-            <option value={30}>Last 30 days</option>
-            <option value={90}>Last 90 days</option>
-          </select>
-        </div>
+        <Link to="/calls" className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800">
+          Review calls
+        </Link>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <KPICard
-          title="Total Calls"
-          value={kpi?.total_calls || 0}
-          subtitle="In selected period"
-          trend={kpi?.total_calls_trend}
-          icon={<PhoneIcon />}
-          loading={kpiLoading}
-        />
-        <KPICard
-          title="Analyzed"
-          value={kpi?.analyzed_calls || 0}
-          subtitle="Successfully processed"
-          trend={kpi?.analyzed_calls_trend}
-          icon={<CheckCircleIcon />}
-          loading={kpiLoading}
-          color="secondary"
-        />
-        <KPICard
-          title="Flagged"
-          value={kpi?.flagged_calls || 0}
-          subtitle="Require attention"
-          trend={kpi?.flagged_calls_trend}
-          icon={<FlagIcon />}
-          loading={kpiLoading}
-          color="danger"
-        />
-        <KPICard
-          title="Avg Score"
-          value={kpi?.average_score || 0}
-          subtitle="Quality rating"
-          trend={kpi?.average_score_trend}
-          icon={<ChartBarIcon />}
-          loading={kpiLoading}
-          color="primary"
-        />
-        <KPICard
-          title="Resolution Rate"
-          value={((kpi?.resolution_rate || 0) * 100)}
-          subtitle="Customer satisfaction"
-          trend={kpi?.resolution_rate_trend}
-          icon={<TrophyIcon />}
-          loading={kpiLoading}
-          color="secondary"
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <StatCard title="Total calls" value={kpi?.total_calls ?? 0} subtitle={`${kpi?.analyzed_calls ?? 0} analyzed`} tone="blue" />
+        <StatCard title="Average quality score" value={`${Math.round(kpi?.average_score || 0)}%`} subtitle="Team benchmark" tone="green" />
+        <StatCard title="Average sentiment" value={dominantSentiment} subtitle="Dominant signal" tone="cyan" />
+        <StatCard title="Failed calls" value={kpi?.failed_calls ?? 0} subtitle="Need retry or review" tone="slate" />
+        <StatCard title="Pending analysis" value={kpi?.pending_calls || 0} subtitle="Queued in AI pipeline" tone="amber" />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <VolumeChart
-          data={volumeData}
-          loading={volumeLoading}
-          onPeriodChange={setVolumePeriod}
-          currentPeriod={volumePeriod}
-        />
-        <SentimentBreakdown
-          data={sentimentData}
-          loading={sentimentLoading}
-        />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <ChartCard title="Call Volume Trend">
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={volume}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
+                <Tooltip />
+                <Area type="monotone" dataKey="total_calls" name="Calls" stroke="#0284c7" fill="#bae6fd" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        <ChartCard title="Quality Score Trend">
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={scores}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} domain={[0, 100]} />
+                <Tooltip />
+                <Area type="monotone" dataKey="average_score" name="Score" stroke="#10b981" fill="#bbf7d0" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
       </div>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ScoreTrend
-          data={scoreTrendData}
-          loading={scoreTrendLoading}
-        />
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Performers</h2>
-          <LeaderboardTable
-            data={leaderboardData}
-            loading={leaderboardLoading}
-          />
-        </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <ChartCard title="Sentiment Distribution">
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={sentimentData} dataKey="value" nameKey="name" innerRadius={56} outerRadius={88} paddingAngle={3}>
+                  {sentimentData.map((entry, index) => <Cell key={entry.name} fill={sentimentColors[index % sentimentColors.length]} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        <Card shadow="sm">
+          <CardHeader><CardTitle>Top Performing Agents</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {agents.slice(0, 5).map((agent) => (
+                <div key={agent.id || agent.email} className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+                  <div>
+                    <p className="font-medium text-slate-900">{agent.name || agent.email}</p>
+                    <p className="text-sm text-slate-500">{agent.total_calls || agent.calls || 0} calls</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-emerald-600">{Math.round(agent.avg_score || agent.average_score || 0)}%</p>
+                    <p className="text-xs text-slate-500">avg score</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card shadow="sm">
+          <CardHeader><CardTitle>Coaching Priority</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {weakAgents.map((agent) => (
+                <div key={agent.id || agent.email} className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+                  <div>
+                    <p className="font-medium text-slate-900">{agent.name || agent.email}</p>
+                    <p className="text-sm text-slate-500">{agent.total_calls || agent.calls || 0} calls reviewed</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-amber-600">{Math.round(agent.avg_score || agent.average_score || 0)}%</p>
+                    <p className="text-xs text-slate-500">avg score</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <ChartCard title="Recent Call Scores">
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={recentCalls}>
+                <XAxis dataKey="id" stroke="#64748b" fontSize={12} tickFormatter={(value) => String(value).slice(0, 6)} />
+                <YAxis stroke="#64748b" fontSize={12} domain={[0, 100]} />
+                <Tooltip />
+                <Bar dataKey="quality_score" fill="#0891b2" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        <Card shadow="sm" className="xl:col-span-2">
+          <CardHeader><CardTitle>Common Topics</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {topics.map((topic) => {
+                const label = topic.label || topic.topic || topic.name;
+                return (
+                  <div key={label} className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+                    <span className="font-medium text-slate-800">{label}</span>
+                    <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">{topic.count || topic.total || 0} calls</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card shadow="sm">
+        <CardHeader><CardTitle>Recent Calls</CardTitle></CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="py-3 pr-4">Call</th>
+                  <th className="py-3 pr-4">Agent</th>
+                  <th className="py-3 pr-4">Status</th>
+                  <th className="py-3 pr-4">Sentiment</th>
+                  <th className="py-3 pr-4">Score</th>
+                  <th className="py-3">Created</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {recentCalls.map((call) => (
+                  <tr key={call.id}>
+                    <td className="py-3 pr-4 font-medium text-slate-900"><Link to={`/calls/${call.id}`}>{call.title}</Link></td>
+                    <td className="py-3 pr-4 text-slate-600">{call.agent_name}</td>
+                    <td className="py-3 pr-4"><StatusBadge status={call.status} /></td>
+                    <td className="py-3 pr-4"><SentimentBadge sentiment={call.sentiment} /></td>
+                    <td className="py-3 pr-4 text-slate-900">{call.quality_score ?? '-'}</td>
+                    <td className="py-3 text-slate-500">{call.created_at ? formatDate(call.created_at) : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../lib/utils';
 
@@ -8,62 +7,64 @@ const navigation = {
   admin: [
     { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
     { name: 'Calls', href: '/calls', icon: PhoneIcon },
+    { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
     { name: 'Reports', href: '/reports', icon: DocumentIcon },
-    { name: 'Users', href: '/users', icon: UsersIcon },
     { name: 'Agents', href: '/agents', icon: UserGroupIcon },
-    { name: 'QA Reviews', href: '/reviews', icon: CheckCircleIcon },
-    { name: 'Settings', href: '/settings/scoring', icon: CogIcon },
+    { name: 'Settings', href: '/settings', icon: CogIcon },
   ],
   manager: [
     { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
     { name: 'Calls', href: '/calls', icon: PhoneIcon },
+    { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
     { name: 'Reports', href: '/reports', icon: DocumentIcon },
     { name: 'Agents', href: '/agents', icon: UserGroupIcon },
-    { name: 'QA Reviews', href: '/reviews', icon: CheckCircleIcon },
+    { name: 'Settings', href: '/settings', icon: CogIcon },
   ],
   qa_supervisor: [
     { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
     { name: 'Calls', href: '/calls', icon: PhoneIcon },
+    { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
     { name: 'Agents', href: '/agents', icon: UserGroupIcon },
-    { name: 'QA Reviews', href: '/reviews', icon: CheckCircleIcon },
   ],
   agent: [
     { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
     { name: 'My Calls', href: '/calls', icon: PhoneIcon },
+    { name: 'Settings', href: '/settings', icon: CogIcon },
   ],
 };
 
 export const Sidebar = () => {
   const { user } = useAuth();
-  const location = useLocation();
-
   if (!user) return null;
 
   const navItems = navigation[user.role] || [];
 
   return (
-    <div className="hidden md:flex md:w-64 md:flex-col">
-      <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
-        <div className="flex items-center flex-shrink-0 px-4">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">hA</span>
+    <aside className="hidden w-72 shrink-0 md:flex md:flex-col">
+      <div className="flex min-h-screen flex-col bg-slate-950 px-4 py-5 text-white">
+        <div className="flex items-center px-2">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-500 shadow-sm shadow-cyan-500/30">
+              <span className="text-sm font-bold tracking-wide text-slate-950">hA</span>
             </div>
-            <span className="ml-2 text-xl font-semibold text-gray-900">haAidra</span>
+            <div>
+              <div className="text-lg font-semibold">haAIdra</div>
+              <div className="text-xs text-slate-400">Call intelligence</div>
+            </div>
           </div>
         </div>
         
-        <nav className="mt-8 flex-1 px-2 space-y-1">
+        <nav className="mt-9 flex-1 space-y-1">
           {navItems.map((item) => (
             <NavLink
               key={item.name}
               to={item.href}
               className={({ isActive }) =>
                 cn(
-                  'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                  'group relative flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-cyan-400/15 text-cyan-100'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
                 )
               }
             >
@@ -72,25 +73,21 @@ export const Sidebar = () => {
                   <item.icon
                     className={cn(
                       'mr-3 h-5 w-5 flex-shrink-0',
-                      isActive ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'
+                      isActive ? 'text-cyan-300' : 'text-slate-500 group-hover:text-slate-300'
                     )}
                   />
                   {item.name}
-                  {isActive && (
-                    <motion.div
-                      layoutId="sidebar-active"
-                      className="absolute left-0 w-1 h-8 bg-primary-500 rounded-r-full"
-                      initial={false}
-                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    />
-                  )}
                 </>
               )}
             </NavLink>
           ))}
         </nav>
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+          <div className="text-sm font-semibold">MVP workspace</div>
+          <p className="mt-1 text-xs leading-5 text-slate-400">API-ready screens with mock fallback while backend endpoints settle.</p>
+        </div>
       </div>
-    </div>
+    </aside>
   );
 };
 
@@ -119,10 +116,10 @@ function DocumentIcon(props) {
   );
 }
 
-function UsersIcon(props) {
+function ChartBarIcon(props) {
   return (
     <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13.5h4v7H3v-7zm7-10h4v17h-4v-17zm7 6h4v11h-4v-11z" />
     </svg>
   );
 }

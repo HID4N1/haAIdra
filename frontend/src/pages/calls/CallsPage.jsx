@@ -1,249 +1,120 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { CallsTable } from '../../components/calls/CallsTable';
-import { UploadCallModal } from '../../components/calls/UploadCallModal';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { formatDate } from '../../lib/utils';
+import { Card, CardContent } from '../../components/ui/Card';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { Input, Select } from '../../components/ui/FormControls';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { StatusBadge, SentimentBadge } from '../../components/ui/StatusBadge';
+import { UploadCallModal } from '../../components/calls/UploadCallModal';
+import { useCalls } from '../../hooks/useCalls';
+import { useTriggerAnalysis } from '../../hooks/useAnalysis';
+import { formatDate, formatDuration } from '../../lib/utils';
 
 export const CallsPage = () => {
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    status: '',
-    channel: '',
-    language: '',
-    is_flagged: '',
-    date_from: '',
-    date_to: '',
-    score_min: '',
-    score_max: '',
-    search: '',
-  });
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [filters, setFilters] = useState({ search: '', status: '', sentiment: '', agent: '', date_from: '', date_to: '' });
+  const { data, isLoading, isError } = useCalls(filters);
+  const triggerAnalysis = useTriggerAnalysis();
+  const calls = useMemo(() => data?.results || [], [data?.results]);
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      status: '',
-      channel: '',
-      language: '',
-      is_flagged: '',
-      date_from: '',
-      date_to: '',
-      score_min: '',
-      score_max: '',
-      search: '',
-    });
-  };
-
-  const activeFiltersCount = Object.values(filters).filter(value => 
-    value !== '' && value !== null && value !== undefined
-  ).length;
+  const agentOptions = useMemo(() => [...new Set(calls.map((call) => call.agent_name).filter(Boolean))], [calls]);
+  const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Calls</h1>
-          <p className="text-gray-500">Manage and analyze call recordings</p>
+          <h1 className="text-2xl font-bold text-slate-950">Calls</h1>
+          <p className="mt-1 text-slate-500">Upload, filter, and inspect every recorded customer conversation.</p>
         </div>
-        
-        <Button
-          onClick={() => setIsUploadModalOpen(true)}
-          className="flex items-center space-x-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Upload Call</span>
-        </Button>
+        <Button onClick={() => setIsUploadOpen(true)}>Upload call</Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Filters</CardTitle>
-            {activeFiltersCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="text-gray-500"
-              >
-                Clear {activeFiltersCount} filter{activeFiltersCount > 1 ? 's' : ''}
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Search */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Search
-              </label>
-              <input
-                type="text"
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-                placeholder="Search calls..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="analyzed">Analyzed</option>
-                <option value="failed">Failed</option>
-              </select>
-            </div>
-
-            {/* Channel */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Channel
-              </label>
-              <select
-                value={filters.channel}
-                onChange={(e) => handleFilterChange('channel', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Channels</option>
-                <option value="phone">Phone</option>
-                <option value="video">Video</option>
-                <option value="chat">Chat</option>
-                <option value="email">Email</option>
-              </select>
-            </div>
-
-            {/* Language */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Language
-              </label>
-              <select
-                value={filters.language}
-                onChange={(e) => handleFilterChange('language', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Languages</option>
-                <option value="english">English</option>
-                <option value="french">French</option>
-                <option value="spanish">Spanish</option>
-                <option value="german">German</option>
-                <option value="italian">Italian</option>
-              </select>
-            </div>
-
-            {/* Flagged */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Flagged
-              </label>
-              <select
-                value={filters.is_flagged}
-                onChange={(e) => handleFilterChange('is_flagged', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All</option>
-                <option value="true">Flagged</option>
-                <option value="false">Not Flagged</option>
-              </select>
-            </div>
-
-            {/* Date Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                From Date
-              </label>
-              <input
-                type="date"
-                value={filters.date_from}
-                onChange={(e) => handleFilterChange('date_from', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                To Date
-              </label>
-              <input
-                type="date"
-                value={filters.date_to}
-                onChange={(e) => handleFilterChange('date_to', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-
-            {/* Score Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Min Score
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="1"
-                step="0.01"
-                value={filters.score_min}
-                onChange={(e) => handleFilterChange('score_min', e.target.value)}
-                placeholder="0.00"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Score
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="1"
-                step="0.01"
-                value={filters.score_max}
-                onChange={(e) => handleFilterChange('score_max', e.target.value)}
-                placeholder="1.00"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-          </div>
+      <Card shadow="sm">
+        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
+          <Input label="Search" value={filters.search} onChange={(event) => setFilter('search', event.target.value)} placeholder="Call, customer, agent" />
+          <Select label="Status" value={filters.status} onChange={(event) => setFilter('status', event.target.value)}>
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="queued">Queued</option>
+            <option value="processing">Processing</option>
+            <option value="running">Running</option>
+            <option value="analyzed">Analyzed</option>
+            <option value="failed">Failed</option>
+          </Select>
+          <Select label="Sentiment" value={filters.sentiment} onChange={(event) => setFilter('sentiment', event.target.value)}>
+            <option value="">All sentiment</option>
+            <option value="positive">Positive</option>
+            <option value="neutral">Neutral</option>
+            <option value="negative">Negative</option>
+          </Select>
+          <Select label="Agent" value={filters.agent} onChange={(event) => setFilter('agent', event.target.value)}>
+            <option value="">All agents</option>
+            {agentOptions.map((agent) => <option key={agent} value={agent}>{agent}</option>)}
+          </Select>
+          <Input label="From" type="date" value={filters.date_from} onChange={(event) => setFilter('date_from', event.target.value)} />
+          <Input label="To" type="date" value={filters.date_to} onChange={(event) => setFilter('date_to', event.target.value)} />
         </CardContent>
       </Card>
 
-      {/* Calls Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-      >
-        <CallsTable filters={filters} />
-      </motion.div>
+      <Card shadow="sm" padding="p-0">
+        {isLoading && <div className="p-6"><Skeleton className="h-80 w-full" /></div>}
+        {isError && <div className="p-6 text-sm text-red-600">Unable to load calls from the API.</div>}
+        {!isLoading && !isError && calls.length === 0 && (
+          <div className="p-10">
+            <EmptyState title="No calls found" description="Upload a call or adjust filters to review conversations." />
+          </div>
+        )}
+        {!isLoading && calls.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-5 py-3">Call ID/name</th>
+                  <th className="px-5 py-3">Agent</th>
+                  <th className="px-5 py-3">Customer</th>
+                  <th className="px-5 py-3">Duration</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Sentiment</th>
+                  <th className="px-5 py-3">Quality</th>
+                  <th className="px-5 py-3">Created</th>
+                  <th className="px-5 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {calls.map((call) => (
+                  <tr key={call.id} className="hover:bg-slate-50">
+                    <td className="px-5 py-4 font-medium text-slate-950">{call.title}<div className="text-xs text-slate-500">{call.id}</div></td>
+                    <td className="px-5 py-4 text-slate-700">{call.agent_name}</td>
+                    <td className="px-5 py-4 text-slate-700">{call.customer_name}</td>
+                    <td className="px-5 py-4 text-slate-700">{formatDuration(call.duration || 0)}</td>
+                    <td className="px-5 py-4"><StatusBadge status={call.job_status || call.status} /></td>
+                    <td className="px-5 py-4"><SentimentBadge sentiment={call.sentiment} /></td>
+                    <td className="px-5 py-4 font-semibold text-slate-900">{call.quality_score ?? '-'}</td>
+                    <td className="px-5 py-4 text-slate-500">{call.created_at ? formatDate(call.created_at) : '-'}</td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <Link className="font-medium text-cyan-700 hover:text-cyan-900" to={`/calls/${call.id}`}>View</Link>
+                        <button
+                          type="button"
+                          className="font-medium text-slate-600 hover:text-slate-950"
+                          disabled={triggerAnalysis.isPending}
+                          onClick={() => triggerAnalysis.mutate(call.id)}
+                        >
+                          Re-analyze
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
-      {/* Upload Modal */}
-      <UploadCallModal
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
-      />
+      <UploadCallModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
     </div>
   );
 };

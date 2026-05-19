@@ -12,6 +12,10 @@ const statusVariants = {
   inactive: 'bg-gray-100 text-gray-800 border-gray-200',
   approved: 'bg-secondary-100 text-secondary-800 border-secondary-200',
   rejected: 'bg-danger-100 text-danger-800 border-danger-200',
+  success: 'bg-secondary-100 text-secondary-800 border-secondary-200',
+  danger: 'bg-danger-100 text-danger-800 border-danger-200',
+  warning: 'bg-warning-100 text-warning-800 border-warning-200',
+  default: 'bg-gray-100 text-gray-800 border-gray-200',
 };
 
 export const Badge = ({ children, variant = 'pending', className, ...props }) => {
@@ -21,7 +25,7 @@ export const Badge = ({ children, variant = 'pending', className, ...props }) =>
       animate={{ scale: 1, opacity: 1 }}
       className={cn(
         'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
-        statusVariants[variant],
+        statusVariants[variant] || statusVariants.default,
         className
       )}
       {...props}

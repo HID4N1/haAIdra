@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { login as loginApi, logout as logoutApi, getUser } from '../lib/auth';
+import { login as loginApi, logout as logoutApi, getCurrentUser, isAuthenticated as hasStoredToken } from '../lib/auth';
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
 
   const userQuery = useQuery({
     queryKey: ['auth', 'user'],
-    queryFn: getUser,
+    queryFn: getCurrentUser,
     staleTime: Infinity,
     retry: false,
   });
@@ -38,7 +38,7 @@ export const useAuth = () => {
   return {
     user: userQuery.data,
     isLoading: userQuery.isLoading,
-    isAuthenticated: !!userQuery.data,
+    isAuthenticated: !!userQuery.data && hasStoredToken(),
     login,
     logout,
     loginError: loginMutation.error,

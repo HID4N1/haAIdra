@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════
-# CallSight AI — Makefile
+# haAIdra AI — Makefile
 # Dev mode: PostgreSQL + Redis in Docker
 #           Django + Celery run natively
 # ═══════════════════════════════════════════════════════
@@ -32,6 +32,9 @@ makemigrations:
 
 createsuperuser:
 	cd backend && python3 manage.py createsuperuser
+
+seed-demo:
+	cd backend && python3 manage.py seed_demo_data --calls 72
 
 collectstatic:
 	cd backend && python3 manage.py collectstatic --noinput
@@ -102,7 +105,7 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 .PHONY: infra infra-detached infra-stop infra-logs \
-        run shell migrate makemigrations createsuperuser collectstatic \
+        run shell migrate makemigrations createsuperuser seed-demo collectstatic \
         worker worker-solo \
         test test-coverage test-users test-calls test-analysis \
         frontend frontend-build frontend-preview \

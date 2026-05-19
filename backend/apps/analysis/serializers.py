@@ -85,6 +85,15 @@ class QAReviewUpdateSerializer(serializers.ModelSerializer):
 
 class AnalysisSerializer(serializers.Serializer):
     """Full analysis payload — all results for a single call."""
+    call_id = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    job_status = serializers.CharField(read_only=True, allow_null=True)
+    current_step = serializers.CharField(read_only=True, allow_null=True)
+    progress = serializers.IntegerField(read_only=True)
+    display_status = serializers.CharField(read_only=True)
+    retry_count = serializers.IntegerField(read_only=True)
+    error = serializers.CharField(read_only=True, allow_null=True, allow_blank=True)
+    updated_at = serializers.DateTimeField(read_only=True)
     transcript = TranscriptSerializer(read_only=True)
     sentiment  = SentimentSerializer(read_only=True)
     topic      = TopicSerializer(read_only=True)

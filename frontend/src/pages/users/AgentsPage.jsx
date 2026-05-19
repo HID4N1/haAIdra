@@ -1,204 +1,96 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Pagination } from '../../components/ui/Table';
-import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/Modal';
-import { useAgents, usePatchAgent, useUpdateAgentCoaching } from '../../hooks/useUsers';
-import { useToast } from '../../components/ui/Toast';
-import { formatDate, formatNumber } from '../../lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { SentimentBadge } from '../../components/ui/StatusBadge';
+import { useAgents } from '../../hooks/useUsers';
+
+const performanceTone = (score) => {
+  if (score >= 90) return 'bg-emerald-50 text-emerald-700';
+  if (score >= 80) return 'bg-blue-50 text-blue-700';
+  if (score >= 70) return 'bg-amber-50 text-amber-700';
+  return 'bg-red-50 text-red-700';
+};
 
 export const AgentsPage = () => {
-  const { success, error } = useToast();
-  const { data: agents, isLoading } = useAgents();
-  const patchAgentMutation = usePatchAgent();
-  const updateCoachingMutation = useUpdateAgentCoaching();
+  const { data, isLoading } = useAgents();
+  const agents = data?.results || [];
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [coachingModalOpen, setCoachingModalOpen] = useState(false);
-  const [selectedAgent, setSelectedAgent] = useState(null);
-  const [coachingNotes, setCoachingNotes] = useState('');
-
-  const handleStatusToggle = async (agentId, currentStatus) => {
-    try {
-      await patchAgentMutation.mutateAsync(agentId, { is_active: !currentStatus });
-      success(`Agent ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-    } catch (err) {
-      error('Failed to update agent status');
-    }
-  };
-
-  const openCoachingModal = (agent) => {
-    setSelectedAgent(agent);
-    setCoachingNotes(agent.coaching_notes || '');
-    setCoachingModalOpen(true);
-  };
-
-  const handleUpdateCoaching = async () => {
-    if (!selectedAgent) return;
-
-    try {
-      await updateCoachingMutation.mutateAsync(selectedAgent.id, coachingNotes);
-      success('Coaching notes updated successfully');
-      setCoachingModalOpen(false);
-      setSelectedAgent(null);
-      setCoachingNotes('');
-    } catch (err) {
-      error('Failed to update coaching notes');
-    }
-  };
-
-  if (isLoading) {
-    return <TableSkeleton />;
-  }
-
-  const agentsList = agents?.results || [];
-  const totalPages = Math.ceil((agents?.count || 0) / 20);
+  if (isLoading) return <Skeleton className="h-[520px] w-full" />;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Agents</h1>
-        <p className="text-gray-500">Manage agent performance and coaching</p>
+        <h1 className="text-2xl font-bold text-slate-950">Agents</h1>
+        <p className="mt-1 text-slate-500">Monitor agent volume, quality, sentiment, and coaching priority.</p>
       </div>
 
-      {/* Agents Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Agent</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Hire Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Avg Score</TableHead>
-              <TableHead>Total Calls</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {agentsList.map((agent, index) => (
-              <TableRow key={agent.id} delay={index}>
-                <TableCell>
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      {agent.first_name} {agent.last_name}
-                    </div>
-                    <div className="text-sm text-gray-500">{agent.email}</div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-gray-900">{agent.department || '-'}</span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-gray-900">
-                    {agent.hire_date ? formatDate(agent.hire_date) : '-'}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={agent.is_active ? 'active' : 'inactive'}>
-                    {agent.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <span className="font-medium text-gray-900">
-                    {agent.average_score ? formatNumber(agent.average_score, 2) : '-'}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-gray-900">{agent.total_calls || 0}</span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openCoachingModal(agent)}
-                    >
-                      Coaching
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleStatusToggle(agent.id, agent.is_active)}
-                      className={agent.is_active ? 'text-warning-600' : 'text-secondary-600'}
-                    >
-                      {agent.is_active ? 'Deactivate' : 'Activate'}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        
-        {totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        )}
-      </div>
-
-      {/* Coaching Notes Modal */}
-      <Modal isOpen={coachingModalOpen} onClose={() => setCoachingModalOpen(false)} size="md">
-        <ModalHeader onClose={() => setCoachingModalOpen(false)}>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Edit Coaching Notes
-          </h3>
-          <p className="text-sm text-gray-500 mt-1">
-            {selectedAgent?.first_name} {selectedAgent?.last_name}
-          </p>
-        </ModalHeader>
-        <ModalBody>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Coaching Notes
-            </label>
-            <textarea
-              rows={6}
-              value={coachingNotes}
-              onChange={(e) => setCoachingNotes(e.target.value)}
-              placeholder="Enter coaching notes, performance feedback, training recommendations..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-          
-          {selectedAgent?.coaching_notes && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Last updated:</p>
-              <p className="text-sm text-gray-700">
-                {selectedAgent.coaching_notes_updated_at 
-                  ? formatDate(selectedAgent.coaching_notes_updated_at)
-                  : 'Unknown'
-                }
-              </p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {agents.map((agent) => (
+          <Card key={agent.id || agent.email} shadow="sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-slate-950">{agent.name}</h2>
+                <p className="mt-1 text-sm text-slate-500">{agent.email}</p>
+              </div>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${performanceTone(agent.average_score)}`}>
+                {agent.performance}
+              </span>
             </div>
-          )}
-        </ModalBody>
-        <ModalFooter>
-          <Button
-            variant="secondary"
-            onClick={() => setCoachingModalOpen(false)}
-            disabled={updateCoachingMutation.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleUpdateCoaching}
-            loading={updateCoachingMutation.isPending}
-          >
-            Save Notes
-          </Button>
-        </ModalFooter>
-      </Modal>
+            <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
+              <Metric label="Role" value={agent.role} />
+              <Metric label="Calls" value={agent.calls} />
+              <Metric label="Avg score" value={`${Math.round(agent.average_score || 0)}%`} />
+              <div>
+                <p className="text-slate-500">Sentiment</p>
+                <div className="mt-1"><SentimentBadge sentiment={agent.average_sentiment} /></div>
+              </div>
+            </div>
+            <button className="mt-6 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              View details
+            </button>
+          </Card>
+        ))}
+      </div>
+
+      <Card shadow="sm" padding="p-0">
+        <CardHeader className="p-6 pb-4"><CardTitle>Agent Performance Table</CardTitle></CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-5 py-3">Agent</th>
+                  <th className="px-5 py-3">Email</th>
+                  <th className="px-5 py-3">Role</th>
+                  <th className="px-5 py-3">Calls</th>
+                  <th className="px-5 py-3">Avg score</th>
+                  <th className="px-5 py-3">Avg sentiment</th>
+                  <th className="px-5 py-3">Performance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {agents.map((agent) => (
+                  <tr key={agent.id || agent.email}>
+                    <td className="px-5 py-4 font-medium text-slate-900">{agent.name}</td>
+                    <td className="px-5 py-4 text-slate-600">{agent.email}</td>
+                    <td className="px-5 py-4 capitalize text-slate-600">{agent.role}</td>
+                    <td className="px-5 py-4 text-slate-600">{agent.calls}</td>
+                    <td className="px-5 py-4 font-semibold text-slate-900">{Math.round(agent.average_score || 0)}%</td>
+                    <td className="px-5 py-4"><SentimentBadge sentiment={agent.average_sentiment} /></td>
+                    <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${performanceTone(agent.average_score)}`}>{agent.performance}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-const TableSkeleton = () => {
-  const { TableSkeleton } = require('../../components/ui/Skeleton');
-  return <TableSkeleton rows={10} columns={7} />;
-};
+const Metric = ({ label, value }) => (
+  <div>
+    <p className="text-slate-500">{label}</p>
+    <p className="mt-1 font-semibold capitalize text-slate-900">{value}</p>
+  </div>
+);
