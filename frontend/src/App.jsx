@@ -4,8 +4,11 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from './components/ui/Toast';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
-import { LandingPage } from './pages/public/LandingPage';
 import { LoginPage } from './pages/auth/LoginPage';
+import { RegisterPage } from './pages/auth/RegisterPage';
+import LandingPage from './pages/public/LandingPage';
+
+// Dashboard
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { CallsPage } from './pages/calls/CallsPage';
 import { CallDetailPage } from './pages/calls/CallDetailPage';
@@ -22,15 +25,24 @@ function App() {
       <ToastProvider>
         <Router>
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+
+            {/* Protected Routes */}
             <Route
+              path="/app"
               element={
                 <ProtectedRoute>
                   <AppShell />
                 </ProtectedRoute>
               }
             >
+              {/* Redirect /app to /app/dashboard */}
+              <Route index element={<Navigate to="/app/dashboard" replace />} />
+
+              {/* Dashboard */}
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="calls" element={<CallsPage />} />
               <Route path="calls/:id" element={<CallDetailPage />} />
@@ -40,7 +52,9 @@ function App() {
               <Route path="settings" element={<SettingsPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
-            <Route path="*" element={<Navigate to="/login" replace />} />
+
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
           </Routes>
         </Router>
       </ToastProvider>

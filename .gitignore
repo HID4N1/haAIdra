@@ -8,3 +8,10 @@ __pycache__/
 # Ignore the logs directory
 backend/staticfiles
 backend/mediafiles
+docker-compose.override.yml
+.env.docker
+backend/Dockerfile.mac
+backend/requirements.mac.txt
+ai_pipeline/Dockerfile.mac
+ai_pipeline/requirements.mac.txt
+infra/nginx.local.conf
